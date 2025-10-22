@@ -7,7 +7,7 @@ import { Search, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { getCurrentUser } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 import { useSearchParams } from "next/navigation"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
@@ -18,12 +18,25 @@ interface HeaderProps {
 export function Header({ onSearch }: HeaderProps) {
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
-  const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null)
+  const [user, setUser] = useState<any>(null)
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
-    setUser(getCurrentUser())
+    
+    const supabase = createClient()
+    
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
@@ -103,6 +116,13 @@ export function Header({ onSearch }: HeaderProps) {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/user?tab=submit">提交工具</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <form action="/auth/signout" method="post">
+                  <button type="submit" className="w-full text-left">
+                    退出登录
+                  </button>
+                </form>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

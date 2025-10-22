@@ -5,7 +5,6 @@ import type React from "react"
 import { Sidebar } from "./sidebar"
 import { Header } from "./header"
 import { useRouter } from "next/navigation"
-import { getCurrentUser } from "@/lib/auth"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -21,12 +20,8 @@ export function MainLayout({ children }: MainLayoutProps) {
   }
 
   const handleSubmitClick = () => {
-    const user = getCurrentUser()
-    if (!user) {
-      router.push("/login?redirect=/user?tab=submit")
-    } else {
-      router.push("/user?tab=submit")
-    }
+    // 让 Header 组件处理用户状态检查
+    router.push("/user?tab=submit")
   }
 
   return (

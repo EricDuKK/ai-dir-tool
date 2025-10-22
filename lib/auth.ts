@@ -1,55 +1,20 @@
-"use client"
-
+import { createClient } from '@/lib/supabase/server'
 import type { User } from "./types"
 
-// Client-side auth using localStorage
-export const AUTH_KEY = "ai_tools_user"
+export async function getCurrentUser(): Promise<User | null> {
+  const supabase = await createClient()
+  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-export function getCurrentUser(): User | null {
-  if (typeof window === "undefined") return null
+  if (!user) return null
 
-  const userStr = localStorage.getItem(AUTH_KEY)
-  if (!userStr) return null
-
-  try {
-    return JSON.parse(userStr)
-  } catch {
-    return null
+  return {
+    id: user.id,
+    username: user.user_metadata?.username || user.email?.split('@')[0] || '',
+    email: user.email || '',
+    avatar: user.user_metadata?.avatar_url || '/placeholder.svg?height=40&width=40',
+    createdAt: user.created_at,
   }
-}
-
-export function login(email: string, password: string): User | null {
-  // Mock login - in production, this would call an API
-  if (email && password) {
-    const user: User = {
-      id: "1",
-      username: email.split("@")[0],
-      email,
-      avatar: "/placeholder.svg?height=40&width=40",
-      createdAt: new Date().toISOString(),
-    }
-    localStorage.setItem(AUTH_KEY, JSON.stringify(user))
-    return user
-  }
-  return null
-}
-
-export function register(email: string, password: string, username: string): User | null {
-  // Mock registration
-  if (email && password && username) {
-    const user: User = {
-      id: Date.now().toString(),
-      username,
-      email,
-      avatar: "/placeholder.svg?height=40&width=40",
-      createdAt: new Date().toISOString(),
-    }
-    localStorage.setItem(AUTH_KEY, JSON.stringify(user))
-    return user
-  }
-  return null
-}
-
-export function logout(): void {
-  localStorage.removeItem(AUTH_KEY)
 }

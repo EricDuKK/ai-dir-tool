@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { getCurrentUser, logout } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 import { getSubmissions, addSubmission } from "@/lib/submissions"
 import { categories, initializeMockSubmissions } from "@/lib/mock-data"
 import type { Submission } from "@/lib/types"
@@ -24,7 +24,7 @@ export default function UserCenterPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  const [user, setUser] = useState(getCurrentUser())
+  const [user, setUser] = useState<any>(null)
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "history")
 
@@ -38,13 +38,30 @@ export default function UserCenterPage() {
   })
 
   useEffect(() => {
-    if (!user) {
-      router.push("/login")
-      return
-    }
-    initializeMockSubmissions(user.id)
-    loadSubmissions()
-  }, [user, router])
+    const supabase = createClient()
+    
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.push("/login")
+        return
+      }
+      setUser(user)
+      initializeMockSubmissions(user.id)
+      loadSubmissions()
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session?.user) {
+        router.push("/login")
+        return
+      }
+      setUser(session.user)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [router])
 
   const loadSubmissions = () => {
     if (user) {
@@ -53,8 +70,9 @@ export default function UserCenterPage() {
     }
   }
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
     router.push("/")
   }
 
@@ -136,10 +154,10 @@ export default function UserCenterPage() {
           <CardContent className="flex items-center justify-between p-6">
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">{user.username[0].toUpperCase()}</span>
+                <span className="text-2xl font-bold text-primary">{(user.user_metadata?.username || user.email?.split('@')[0] || 'U')[0].toUpperCase()}</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{user.username}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{user.user_metadata?.username || user.email?.split('@')[0] || '用户'}</h1>
                 <p className="text-sm text-muted-foreground">{user.email}</p>
               </div>
             </div>
@@ -307,7 +325,7 @@ export default function UserCenterPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>用户名</Label>
-                  <Input value={user.username} disabled />
+                  <Input value={user.user_metadata?.username || user.email?.split('@')[0] || ''} disabled />
                 </div>
                 <div className="space-y-2">
                   <Label>邮箱</Label>
