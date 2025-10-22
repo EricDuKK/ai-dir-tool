@@ -1,13 +1,14 @@
 "use client"
 
 import type React from "react"
+import { useState, useEffect } from "react"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { categories } from "@/lib/mock-data"
+import { getCategories, type Category } from "@/lib/supabase/categories"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { PenSquare, ImageIcon, Video, FolderOpen, Bot, MessageSquare, Code, Palette, Music, Search } from "lucide-react"
+import { PenSquare, ImageIcon, Video, FolderOpen, Bot, MessageSquare, Code, Palette, Music, Search, BookOpen, TrendingUp, BarChart3, DollarSign } from "lucide-react"
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   writing: PenSquare,
@@ -20,6 +21,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   design: Palette,
   audio: Music,
   search: Search,
+  education: BookOpen,      // 📚 教育工具
+  marketing: TrendingUp,    // 📈 营销工具  
+  analytics: BarChart3,    // 📊 数据分析
+  finance: DollarSign,      // 💰 金融工具
 }
 
 interface SidebarProps {
@@ -29,6 +34,41 @@ interface SidebarProps {
 
 export function Sidebar({ onCategoryClick, onSubmitClick }: SidebarProps) {
   const pathname = usePathname()
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // 从数据库获取分类数据
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getCategories()
+        setCategories(data)
+      } catch (err) {
+        console.error('Failed to fetch categories:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load categories')
+        // 如果数据库连接失败，使用默认数据作为后备
+        setCategories([
+          { id: "writing", name: "AI Writing Tools", name_zh: "AI写作工具", icon: "✍️" },
+          { id: "image", name: "AI Image Tools", name_zh: "AI图像工具", icon: "🖼️" },
+          { id: "video", name: "AI Video Tools", name_zh: "AI视频工具", icon: "🎬" },
+          { id: "office", name: "AI Office Tools", name_zh: "AI办公工具", icon: "📁" },
+          { id: "agent", name: "AI Agents", name_zh: "AI智能体", icon: "🤖" },
+          { id: "chat", name: "AI Chat Assistants", name_zh: "AI聊天助手", icon: "💬" },
+          { id: "coding", name: "AI Coding Tools", name_zh: "AI编程工具", icon: "💻" },
+          { id: "design", name: "AI Design Tools", name_zh: "AI设计工具", icon: "🎨" },
+          { id: "audio", name: "AI Audio Tools", name_zh: "AI音频工具", icon: "🎵" },
+          { id: "search", name: "AI Search Engines", name_zh: "AI搜索引擎", icon: "🔍" },
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCategories()
+  }, [])
 
   const handleCategoryClick = (categoryId: string) => {
     if (pathname === "/") {
@@ -73,23 +113,45 @@ export function Sidebar({ onCategoryClick, onSubmitClick }: SidebarProps) {
         {/* Categories */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <div className="space-y-1">
-            {categories.map((category) => {
-              const Icon = iconMap[category.id]
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategoryClick(category.id)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    "text-sidebar-foreground",
-                  )}
-                >
-                  {Icon && <Icon className="h-4 w-4 shrink-0" />}
-                  <span className="truncate">{category.nameZh}</span>
-                </button>
-              )
-            })}
+            {loading ? (
+              // 加载状态
+              <div className="space-y-1">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm"
+                  >
+                    <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-muted" />
+                    <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              // 错误状态
+              <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground">
+                <div className="h-4 w-4 shrink-0" />
+                <span className="truncate">加载失败，使用默认数据</span>
+              </div>
+            ) : (
+              // 正常状态
+              categories.map((category) => {
+                const Icon = iconMap[category.id]
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategoryClick(category.id)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      "text-sidebar-foreground",
+                    )}
+                  >
+                    {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                    <span className="truncate">{category.name_zh}</span>
+                  </button>
+                )
+              })
+            )}
           </div>
         </nav>
 
