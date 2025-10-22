@@ -1,0 +1,412 @@
+---
+description: 相关数据库操作时需要查看该rules
+alwaysApply: false
+---
+# AI工具集数据库设计文档 (简化版)
+
+## 📋 项目概述
+
+本文档为AI工具集网站设计简化的数据库表结构，基于实际项目需求，避免过度设计。
+
+## 🗄️ 数据库表设计
+
+### 1. 分类表 (categories)
+
+**用途**: 存储首页左侧分类数据，仅包含名称和图标
+
+```sql
+CREATE TABLE categories (
+  id VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  name_zh VARCHAR(100) NOT NULL,
+  icon VARCHAR(10) NOT NULL
+);
+
+-- 插入初始数据
+INSERT INTO categories (id, name, name_zh, icon) VALUES
+('writing', 'AI Writing Tools', 'AI写作工具', '✍️'),
+('image', 'AI Image Tools', 'AI图像工具', '🖼️'),
+('video', 'AI Video Tools', 'AI视频工具', '🎬'),
+('office', 'AI Office Tools', 'AI办公工具', '📁'),
+('agent', 'AI Agents', 'AI智能体', '🤖'),
+('chat', 'AI Chat Assistants', 'AI聊天助手', '💬'),
+('coding', 'AI Coding Tools', 'AI编程工具', '💻'),
+('design', 'AI Design Tools', 'AI设计工具', '🎨'),
+('audio', 'AI Audio Tools', 'AI音频工具', '🎵'),
+('search', 'AI Search Engines', 'AI搜索引擎', '🔍');
+```
+
+### 2. AI工具表 (ai_tools)
+
+**用途**: 存储所有AI工具的详细信息，包括已审核通过的工具
+
+```sql
+CREATE TABLE ai_tools (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(200) NOT NULL,
+  name_zh VARCHAR(200) NOT NULL,
+  slug VARCHAR(200) NOT NULL UNIQUE, -- SEO友好的URL标识
+  description TEXT NOT NULL,
+  description_zh TEXT NOT NULL,
+  detailed_introduction TEXT,
+  logo_url VARCHAR(500),
+  category_id VARCHAR(50) NOT NULL REFERENCES categories(id),
+  website_url VARCHAR(500) NOT NULL,
+  is_hot BOOLEAN DEFAULT false,
+  is_new BOOLEAN DEFAULT false,
+  tags TEXT[], -- PostgreSQL数组类型
+  view_count INTEGER DEFAULT 0,
+  like_count INTEGER DEFAULT 0,
+  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id), -- 关联Supabase用户
+  approved_at TIMESTAMP WITH TIME ZONE,
+  approved_by UUID REFERENCES auth.users(id)
+);
+
+-- 创建索引
+CREATE INDEX idx_ai_tools_category ON ai_tools(category_id);
+CREATE INDEX idx_ai_tools_status ON ai_tools(status);
+CREATE INDEX idx_ai_tools_is_hot ON ai_tools(is_hot);
+CREATE INDEX idx_ai_tools_is_new ON ai_tools(is_new);
+CREATE INDEX idx_ai_tools_created_at ON ai_tools(created_at);
+CREATE INDEX idx_ai_tools_view_count ON ai_tools(view_count);
+CREATE INDEX idx_ai_tools_like_count ON ai_tools(like_count);
+CREATE INDEX idx_ai_tools_slug ON ai_tools(slug);
+
+-- 全文搜索索引
+CREATE INDEX idx_ai_tools_search ON ai_tools USING gin(to_tsvector('english', name || ' ' || name_zh || ' ' || description || ' ' || description_zh));
+```
+
+### 3. 用户提交表 (user_submissions)
+
+**用途**: 存储用户提交的AI工具记录，管理审核流程
+
+```sql
+CREATE TABLE user_submissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  tool_name VARCHAR(200) NOT NULL,
+  tool_name_zh VARCHAR(200),
+  tool_url VARCHAR(500) NOT NULL,
+  tool_description TEXT NOT NULL,
+  tool_description_zh TEXT,
+  tool_logo_url VARCHAR(500),
+  category_id VARCHAR(50) NOT NULL REFERENCES categories(id),
+  tags TEXT[],
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'needs_revision')),
+  submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  reviewed_at TIMESTAMP WITH TIME ZONE,
+  reviewed_by UUID REFERENCES auth.users(id),
+  review_notes TEXT,
+  rejection_reason TEXT,
+  revision_notes TEXT,
+  ai_tool_id UUID REFERENCES ai_tools(id), -- 审核通过后关联到ai_tools表
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_user_submissions_user_id ON user_submissions(user_id);
+CREATE INDEX idx_user_submissions_status ON user_submissions(status);
+CREATE INDEX idx_user_submissions_submitted_at ON user_submissions(submitted_at);
+CREATE INDEX idx_user_submissions_category ON user_submissions(category_id);
+CREATE INDEX idx_user_submissions_reviewed_by ON user_submissions(reviewed_by);
+CREATE INDEX idx_user_submissions_ai_tool_id ON user_submissions(ai_tool_id);
+```
+
+## 🔗 表关系说明
+
+### 关系图
+```
+categories (1) ←→ (N) ai_tools
+categories (1) ←→ (N) user_submissions
+auth.users (1) ←→ (N) ai_tools (created_by)
+auth.users (1) ←→ (N) user_submissions
+user_submissions (1) ←→ (1) ai_tools (ai_tool_id) [审核通过后]
+```
+
+### 业务流程
+1. **用户提交** → `user_submissions` 表 (status: pending)
+2. **管理员审核** → 更新 `user_submissions` 表 (status: approved/rejected)
+3. **审核通过** → 创建 `ai_tools` 记录，关联 `user_submissions.ai_tool_id`
+
+## 📊 数据统计查询
+
+### 常用查询SQL
+
+```sql
+-- 1. 获取分类及其工具数量
+SELECT 
+  c.id,
+  c.name_zh,
+  c.icon,
+  COUNT(t.id) as tool_count
+FROM categories c
+LEFT JOIN ai_tools t ON c.id = t.category_id AND t.status = 'active'
+GROUP BY c.id, c.name_zh, c.icon
+ORDER BY c.id;
+
+-- 2. 获取热门工具
+SELECT 
+  t.*,
+  c.name_zh as category_name
+FROM ai_tools t
+JOIN categories c ON t.category_id = c.id
+WHERE t.status = 'active' AND t.is_hot = true
+ORDER BY t.view_count DESC, t.created_at DESC
+LIMIT 10;
+
+-- 3. 获取最新工具
+SELECT 
+  t.*,
+  c.name_zh as category_name
+FROM ai_tools t
+JOIN categories c ON t.category_id = c.id
+WHERE t.status = 'active' AND t.is_new = true
+ORDER BY t.created_at DESC
+LIMIT 10;
+
+-- 4. 搜索工具
+SELECT 
+  t.*,
+  c.name_zh as category_name
+FROM ai_tools t
+JOIN categories c ON t.category_id = c.id
+WHERE t.status = 'active' 
+  AND (
+    t.name ILIKE '%搜索词%' OR 
+    t.name_zh ILIKE '%搜索词%' OR
+    t.description ILIKE '%搜索词%' OR
+    t.description_zh ILIKE '%搜索词%'
+  )
+ORDER BY t.view_count DESC;
+
+-- 5. 用户提交统计
+SELECT 
+  u.email,
+  COUNT(s.id) as total_submissions,
+  COUNT(CASE WHEN s.status = 'approved' THEN 1 END) as approved_count,
+  COUNT(CASE WHEN s.status = 'pending' THEN 1 END) as pending_count,
+  COUNT(CASE WHEN s.status = 'rejected' THEN 1 END) as rejected_count
+FROM auth.users u
+LEFT JOIN user_submissions s ON u.id = s.user_id
+GROUP BY u.id, u.email;
+
+-- 6. 审核工作台查询
+SELECT 
+  s.*,
+  u.email as submitter_email,
+  c.name_zh as category_name,
+  reviewer.email as reviewer_email
+FROM user_submissions s
+JOIN auth.users u ON s.user_id = u.id
+JOIN categories c ON s.category_id = c.id
+LEFT JOIN auth.users reviewer ON s.reviewed_by = reviewer.id
+WHERE s.status = 'pending'
+ORDER BY s.submitted_at ASC;
+```
+
+## 🔧 Service Role 配置
+
+### 1. 环境变量配置
+```env
+# Supabase配置
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+```
+
+### 2. 服务端客户端配置
+```typescript
+// lib/supabase/admin.ts
+import { createClient } from '@supabase/supabase-js'
+
+export function createAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+}
+```
+
+### 3. 数据访问示例
+```typescript
+// 获取所有分类
+export async function getCategories() {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('id')
+  
+  if (error) throw error
+  return data
+}
+
+// 获取活跃的AI工具
+export async function getActiveTools() {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('ai_tools')
+    .select(`
+      *,
+      categories(name_zh, icon)
+    `)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  return data
+}
+
+// 用户提交工具
+export async function submitTool(submission: {
+  user_id: string
+  tool_name: string
+  tool_name_zh?: string
+  tool_url: string
+  tool_description: string
+  tool_description_zh?: string
+  tool_logo_url?: string
+  category_id: string
+  tags?: string[]
+}) {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('user_submissions')
+    .insert(submission)
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
+}
+
+// 审核工具提交
+export async function reviewSubmission(
+  submissionId: string, 
+  status: 'approved' | 'rejected' | 'needs_revision',
+  reviewerId: string,
+  notes?: string
+) {
+  const supabase = createAdminClient()
+  
+  if (status === 'approved') {
+    // 创建AI工具记录
+    const { data: submission } = await supabase
+      .from('user_submissions')
+      .select('*')
+      .eq('id', submissionId)
+      .single()
+    
+    if (submission) {
+      const { data: aiTool } = await supabase
+        .from('ai_tools')
+        .insert({
+          name: submission.tool_name,
+          name_zh: submission.tool_name_zh,
+          slug: generateSlug(submission.tool_name),
+          description: submission.tool_description,
+          description_zh: submission.tool_description_zh,
+          logo_url: submission.tool_logo_url,
+          category_id: submission.category_id,
+          website_url: submission.tool_url,
+          tags: submission.tags,
+          created_by: submission.user_id,
+          approved_by: reviewerId
+        })
+        .select()
+        .single()
+      
+      // 更新提交记录
+      await supabase
+        .from('user_submissions')
+        .update({
+          status,
+          reviewed_by: reviewerId,
+          reviewed_at: new Date().toISOString(),
+          review_notes: notes,
+          ai_tool_id: aiTool?.id
+        })
+        .eq('id', submissionId)
+    }
+  } else {
+    // 拒绝或需要修改
+    await supabase
+      .from('user_submissions')
+      .update({
+        status,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date().toISOString(),
+        review_notes: notes
+      })
+      .eq('id', submissionId)
+  }
+}
+```
+
+## 🚀 部署建议
+
+### 1. 数据库迁移脚本
+```sql
+-- 创建扩展
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 执行上述所有CREATE TABLE语句
+-- 执行所有索引创建语句
+-- 注意：不启用RLS，不使用RLS策略
+```
+
+### 2. 安全考虑
+- **Service Role Key 安全**: 确保 `SUPABASE_SERVICE_ROLE_KEY` 只在服务端使用，绝不暴露给客户端
+- **API 路由保护**: 在 Next.js API 路由中验证用户身份
+- **输入验证**: 对所有用户输入进行严格验证
+- **权限控制**: 在应用层面实现权限控制逻辑
+
+## 📈 性能优化建议
+
+1. **索引优化**: 为常用查询字段创建复合索引
+2. **分页查询**: 使用LIMIT和OFFSET进行分页
+3. **缓存策略**: 对热门数据使用Redis缓存
+4. **CDN加速**: 工具logo图片使用CDN存储
+5. **搜索优化**: 使用PostgreSQL全文搜索功能
+6. **连接池**: 配置Supabase连接池优化性能
+
+## 🎯 关键特性
+
+### SEO 优化
+- **slug 字段**: 支持 SEO 友好的 URL 结构
+- **全文搜索**: 支持中英文搜索
+- **元数据**: 丰富的工具描述和标签
+
+### 审核流程
+- **状态管理**: pending → approved/rejected/needs_revision
+- **审核记录**: 记录审核人和审核时间
+- **关联管理**: 审核通过后自动创建 AI 工具记录
+
+### 数据分析
+- **统计查询**: 支持各种维度的数据统计
+- **用户行为**: 记录查看次数和点赞数
+- **分类管理**: 简化的分类结构，仅包含必要字段
+
+## 📝 简化说明
+
+### 分类表简化
+- **移除了**: `description`, `sort_order`, `is_active`, `created_at`, `updated_at`
+- **保留了**: `id`, `name`, `name_zh`, `icon` (与 sidebar.tsx 组件需求完全匹配)
+
+### 设计原则
+1. **最小化设计**: 只包含当前项目实际需要的字段
+2. **避免过度设计**: 不添加未来可能用到的字段
+3. **保持简洁**: 表结构清晰，易于理解和维护
+4. **性能优先**: 减少不必要的字段和索引
+
+这个简化版本完全满足您当前项目的需求，避免了过度设计，同时保持了必要的功能和性能。
