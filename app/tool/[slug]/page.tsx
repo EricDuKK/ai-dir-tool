@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { ExternalLink, Tag } from "lucide-react"
 import Image from "next/image"
 import { notFound } from "next/navigation"
+import { WebsitePreview } from "@/components/website-preview"
 
 interface ToolDetailPageProps {
   params: Promise<{ slug: string }>
@@ -26,6 +27,13 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   return (
     <MainLayout>
       <div className="container mx-auto px-8 py-8 max-w-5xl">
+        {/* Website Preview */}
+        <WebsitePreview 
+          url={tool.url} 
+          title={tool.nameZh}
+          className="mb-8"
+        />
+
         {/* Tool Header */}
         <Card className="mb-8">
           <CardContent className="p-8">
