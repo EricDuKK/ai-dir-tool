@@ -1,7 +1,3 @@
----
-description: 需要涉及supabase storage 存储时查看该rules
-alwaysApply: false
----
 # Supabase Storage Bucket 设计文档
 
 ## 📋 存储需求分析
@@ -547,4 +543,4 @@ supabase db reset
 - 监控异常上传行为
 - 更新安全策略
 
-这个设计方案完全满足您的存储需求，提供了高效、安全、可扩展的图片存储解决方案
+这个设计方案完全满足您的存储需求，提供了高效、安全、可扩展的图片存储解决方案。
