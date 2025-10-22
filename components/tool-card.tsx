@@ -10,7 +10,7 @@ interface ToolCardProps {
 
 export function ToolCard({ tool }: ToolCardProps) {
   return (
-    <Link href={`/tool/${tool.id}`}>
+    <Link href={`/tool/${tool.slug}`}>
       <Card className="group h-full transition-all hover:shadow-md hover:border-primary/50">
         <CardContent className="flex items-start gap-3 p-4">
           {/* Tool Logo */}

@@ -4,6 +4,7 @@ export interface Tool {
   id: string
   name: string
   nameZh: string // Chinese name
+  slug: string // SEO-friendly URL slug
   description: string
   descriptionZh: string // Chinese description
   detailedIntroduction?: string // Detailed introduction for detail page

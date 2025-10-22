@@ -9,12 +9,12 @@ import Image from "next/image"
 import { notFound } from "next/navigation"
 
 interface ToolDetailPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }
 
 export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
-  const { id } = await params
-  const tool = mockTools.find((t) => t.id === id)
+  const { slug } = await params
+  const tool = mockTools.find((t) => t.slug === slug)
 
   if (!tool) {
     notFound()

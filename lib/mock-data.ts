@@ -18,6 +18,7 @@ export const mockTools: Tool[] = [
     id: "1",
     name: "Doubao",
     nameZh: "豆包",
+    slug: "doubao",
     description: "Free AI assistant with powerful capabilities",
     descriptionZh: "免费全能AI助手，功能强大",
     detailedIntroduction:
@@ -33,6 +34,7 @@ export const mockTools: Tool[] = [
     id: "2",
     name: "Kimi",
     nameZh: "绘蛙",
+    slug: "kimi",
     description: "AI image generation tool",
     descriptionZh: "AI电商营销工具，快速生成商品图",
     detailedIntroduction:
@@ -48,6 +50,7 @@ export const mockTools: Tool[] = [
     id: "3",
     name: "Koala PPT",
     nameZh: "扣子PPT",
+    slug: "koala-ppt",
     description: "Generate PPT presentations with AI",
     descriptionZh: "免费一键生成精美PPT",
     detailedIntroduction:
@@ -63,6 +66,7 @@ export const mockTools: Tool[] = [
     id: "4",
     name: "AiPPT",
     nameZh: "AiPPT",
+    slug: "aippt",
     description: "AI-powered presentation maker",
     descriptionZh: "AI快速生成高质量PPT",
     detailedIntroduction:
@@ -78,6 +82,7 @@ export const mockTools: Tool[] = [
     id: "5",
     name: "Secret AI Search",
     nameZh: "秘塔AI搜索",
+    slug: "secret-ai-search",
     description: "AI-powered search engine",
     descriptionZh: "超好用的AI搜索工具",
     detailedIntroduction:
@@ -93,6 +98,7 @@ export const mockTools: Tool[] = [
     id: "6",
     name: "Coze AI",
     nameZh: "堆友AI",
+    slug: "coze-ai",
     description: "Free AI drawing tool",
     descriptionZh: "免费AI绘画工具，快速生成图片",
     detailedIntroduction:
@@ -108,6 +114,7 @@ export const mockTools: Tool[] = [
     id: "7",
     name: "Figma AI",
     nameZh: "美图设计室",
+    slug: "figma-ai",
     description: "AI image creation and design",
     descriptionZh: "AI图像创作和设计工具",
     detailedIntroduction:
@@ -123,6 +130,7 @@ export const mockTools: Tool[] = [
     id: "8",
     name: "Spark Fire",
     nameZh: "讯飞星火",
+    slug: "spark-fire",
     description: "AI smart assistant",
     descriptionZh: "AI智能助手，免费使用",
     detailedIntroduction:
@@ -138,6 +146,7 @@ export const mockTools: Tool[] = [
     id: "9",
     name: "Office Coolie",
     nameZh: "办公小浣熊",
+    slug: "office-coolie",
     description: "AI data analysis tool",
     descriptionZh: "最强AI数据分析工具",
     detailedIntroduction:
@@ -153,6 +162,7 @@ export const mockTools: Tool[] = [
     id: "10",
     name: "Feishu Docs",
     nameZh: "讯飞绘文",
+    slug: "feishu-docs",
     description: "Free AI writing tool",
     descriptionZh: "免费AI写作工具，快速生成文章",
     detailedIntroduction:
@@ -168,6 +178,7 @@ export const mockTools: Tool[] = [
     id: "11",
     name: "Code Fly",
     nameZh: "码上飞",
+    slug: "code-fly",
     description: "AI code generation",
     descriptionZh: "一句话生成微信小程序",
     detailedIntroduction:
@@ -183,6 +194,7 @@ export const mockTools: Tool[] = [
     id: "12",
     name: "Mini AI",
     nameZh: "千页小说AI",
+    slug: "mini-ai",
     description: "AI novel writing",
     descriptionZh: "一站式AI小说创作平台",
     detailedIntroduction:
@@ -197,6 +209,7 @@ export const mockTools: Tool[] = [
     id: "13",
     name: "Tunee",
     nameZh: "Tunee",
+    slug: "tunee",
     description: "AI music creation",
     descriptionZh: "音乐对话式音乐创作工具",
     detailedIntroduction:
@@ -211,6 +224,7 @@ export const mockTools: Tool[] = [
     id: "14",
     name: "Transor",
     nameZh: "Transor沉浸式翻译",
+    slug: "transor",
     description: "AI translation tool",
     descriptionZh: "AI翻译工具，提供沉浸式体验",
     detailedIntroduction:
@@ -225,6 +239,7 @@ export const mockTools: Tool[] = [
     id: "15",
     name: "Toca",
     nameZh: "搭叨",
+    slug: "toca",
     description: "AI mind mapping",
     descriptionZh: "心流AI脑图下载AI工具",
     detailedIntroduction:
@@ -239,6 +254,7 @@ export const mockTools: Tool[] = [
     id: "16",
     name: "iFlow CLI",
     nameZh: "iFlow CLI",
+    slug: "iflow-cli",
     description: "AI command line interface",
     descriptionZh: "心流AI脑图的命令行工具",
     detailedIntroduction:
