@@ -185,44 +185,30 @@ export function FileUpload({
       <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors">
         <CardContent className="p-4">
           {preview ? (
-            <div className="space-y-3">
-              {/* 小缩略图预览 */}
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded border overflow-hidden bg-muted flex items-center justify-center">
-                  <img
-                    src={preview}
-                    alt="预览"
-                    className="h-full w-full object-cover"
-                    onLoad={handleImageLoad}
-                    onError={handleImageError}
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">图片已上传</p>
-                  <p className="text-xs text-muted-foreground">点击删除按钮可移除图片</p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRemove}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <X className="h-4 w-4" />
-                  删除
-                </Button>
-              </div>
-              
-              {/* 完整预览 */}
-              <div className="border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded border overflow-hidden bg-muted flex items-center justify-center">
                 <img
                   src={preview}
-                  alt="完整预览"
-                  className="w-full h-32 object-cover"
+                  alt="预览"
+                  className="h-full w-full object-cover"
                   onLoad={handleImageLoad}
                   onError={handleImageError}
                 />
               </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">图片已上传</p>
+                <p className="text-xs text-muted-foreground">点击删除按钮可移除图片</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRemove}
+                className="text-destructive hover:text-destructive"
+              >
+                <X className="h-4 w-4" />
+                删除
+              </Button>
             </div>
           ) : (
             <div className="text-center py-8">
