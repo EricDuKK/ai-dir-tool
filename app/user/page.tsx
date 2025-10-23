@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
 import { getUserSubmissions, submitTool } from "@/lib/supabase/user-submissions"
+import { testSupabaseConnection, testUserSubmissionsTable } from "@/lib/supabase/test-connection"
 import type { Submission } from "@/lib/types"
 import { LogOut, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -41,29 +42,67 @@ export default function UserCenterPage() {
   })
 
   useEffect(() => {
-    const supabase = createClient()
+    async function initializeUser() {
+      try {
+        // 首先测试 Supabase 连接
+        console.log('Testing Supabase connection...')
+        const connectionTest = await testSupabaseConnection()
+        if (!connectionTest.success) {
+          console.error('Supabase connection failed:', connectionTest.error)
+          toast({
+            title: "连接失败",
+            description: `无法连接到数据库: ${connectionTest.error}`,
+            variant: "destructive",
+          })
+          return
+        }
+        
+        // 测试 user_submissions 表
+        console.log('Testing user_submissions table...')
+        const tableTest = await testUserSubmissionsTable()
+        if (!tableTest.success) {
+          console.error('user_submissions table test failed:', tableTest.error)
+          toast({
+            title: "表访问失败",
+            description: `无法访问提交表: ${tableTest.error}`,
+            variant: "destructive",
+          })
+          return
+        }
+        
+        const supabase = createClient()
+        
+        // Get initial user
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push("/login")
+          return
+        }
+        setUser(user)
+        loadSubmissions()
+        
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (!session?.user) {
+            router.push("/login")
+            return
+          }
+          setUser(session.user)
+        })
+
+        return () => subscription.unsubscribe()
+      } catch (error) {
+        console.error('Error initializing user:', error)
+        toast({
+          title: "初始化失败",
+          description: "无法初始化用户数据",
+          variant: "destructive",
+        })
+      }
+    }
     
-    // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.push("/login")
-        return
-      }
-      setUser(user)
-      loadSubmissions()
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session?.user) {
-        router.push("/login")
-        return
-      }
-      setUser(session.user)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [router])
+    initializeUser()
+  }, [router, toast])
 
   const loadSubmissions = async () => {
     if (user) {
@@ -89,10 +128,28 @@ export default function UserCenterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    console.log('Submit button clicked, form data:', formData)
 
-    if (!user) return
+    if (!user) {
+      console.error('No user found')
+      toast({
+        title: "提交失败",
+        description: "用户未登录",
+        variant: "destructive",
+      })
+      return
+    }
 
     if (!formData.toolName || !formData.toolNameZh || !formData.toolUrl || !formData.toolDescription || !formData.toolDescriptionZh || !formData.slug) {
+      console.log('Missing required fields:', {
+        toolName: formData.toolName,
+        toolNameZh: formData.toolNameZh,
+        toolUrl: formData.toolUrl,
+        toolDescription: formData.toolDescription,
+        toolDescriptionZh: formData.toolDescriptionZh,
+        slug: formData.slug
+      })
       toast({
         title: "提交失败",
         description: "请填写所有必填字段",
@@ -101,6 +158,8 @@ export default function UserCenterPage() {
       return
     }
 
+    console.log('Starting tool submission...')
+    
     try {
       const result = await submitTool({
         toolName: formData.toolName,
@@ -113,6 +172,8 @@ export default function UserCenterPage() {
         slug: formData.slug,
         userId: user.id,
       })
+
+      console.log('Submit result:', result)
 
       if (result.success) {
         toast({
@@ -144,7 +205,7 @@ export default function UserCenterPage() {
       console.error('Submit error:', error)
       toast({
         title: "提交失败",
-        description: "提交失败，请重试",
+        description: `提交失败: ${error instanceof Error ? error.message : '未知错误'}`,
         variant: "destructive",
       })
     }

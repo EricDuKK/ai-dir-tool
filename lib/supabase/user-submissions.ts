@@ -35,7 +35,9 @@ export async function submitTool(formData: {
   userId: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log('submitTool called with:', formData)
     const supabase = createClient()
+    console.log('Supabase client created successfully')
     
     // 检查 slug 是否已存在（使用更安全的查询方式）
     try {
