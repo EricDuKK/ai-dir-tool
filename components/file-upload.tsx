@@ -39,6 +39,11 @@ export function FileUpload({
     const file = event.target.files?.[0]
     if (!file) return
 
+    // 如果已经有预览图片，先清除
+    if (preview) {
+      setPreview(null)
+    }
+
     // 检查文件大小
     if (file.size > maxSize * 1024 * 1024) {
       toast({
@@ -110,11 +115,18 @@ export function FileUpload({
   const handleRemove = async () => {
     if (!preview) return
 
+    // 保存当前预览URL用于删除
+    const currentPreview = preview
+
+    // 立即清除预览状态
+    setPreview(null)
+    onRemove()
+
     try {
       const supabase = createClient()
       
       // 从URL中提取文件路径
-      const url = new URL(preview)
+      const url = new URL(currentPreview)
       const pathParts = url.pathname.split('/')
       const bucketIndex = pathParts.findIndex(part => part === bucket)
       const filePath = pathParts.slice(bucketIndex + 1).join('/')
@@ -133,8 +145,10 @@ export function FileUpload({
 
       console.log('File removed successfully')
       
-      setPreview(null)
-      onRemove()
+      // 重置文件输入框
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
       
       toast({
         title: "删除成功",
