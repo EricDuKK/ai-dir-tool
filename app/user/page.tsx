@@ -79,16 +79,21 @@ export default function UserCenterPage() {
           return
         }
         setUser(user)
-        loadSubmissions()
         
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state changed:', event, session?.user?.id)
           if (!session?.user) {
             router.push("/login")
             return
           }
           setUser(session.user)
+          // 当认证状态变化时，重新加载提交历史
+          await loadSubmissionsForUser(session.user.id)
         })
+
+        // 初始加载提交历史
+        await loadSubmissionsForUser(user.id)
 
         return () => subscription.unsubscribe()
       } catch (error) {
@@ -104,19 +109,33 @@ export default function UserCenterPage() {
     initializeUser()
   }, [router, toast])
 
+  // 监听用户状态变化，重新加载提交历史
+  useEffect(() => {
+    if (user?.id) {
+      console.log('User state changed, reloading submissions for:', user.id)
+      loadSubmissionsForUser(user.id)
+    }
+  }, [user?.id])
+
+  const loadSubmissionsForUser = async (userId: string) => {
+    try {
+      console.log('Loading submissions for user:', userId)
+      const userSubmissions = await getUserSubmissions(userId)
+      console.log('Loaded submissions:', userSubmissions.length)
+      setSubmissions(userSubmissions)
+    } catch (error) {
+      console.error('Error loading submissions:', error)
+      toast({
+        title: "加载失败",
+        description: "无法加载提交记录",
+        variant: "destructive",
+      })
+    }
+  }
+
   const loadSubmissions = async () => {
     if (user) {
-      try {
-        const userSubmissions = await getUserSubmissions(user.id)
-        setSubmissions(userSubmissions)
-      } catch (error) {
-        console.error('Error loading submissions:', error)
-        toast({
-          title: "加载失败",
-          description: "无法加载提交记录",
-          variant: "destructive",
-        })
-      }
+      await loadSubmissionsForUser(user.id)
     }
   }
 
