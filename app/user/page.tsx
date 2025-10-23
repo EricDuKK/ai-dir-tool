@@ -14,11 +14,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
-import { getSubmissions, addSubmission } from "@/lib/submissions"
-import { categories, initializeMockSubmissions } from "@/lib/mock-data"
+import { getUserSubmissions, submitTool } from "@/lib/supabase/user-submissions"
 import type { Submission } from "@/lib/types"
 import { LogOut, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { FileUpload } from "@/components/file-upload"
 
 export default function UserCenterPage() {
   const router = useRouter()
@@ -31,10 +31,13 @@ export default function UserCenterPage() {
   // Form state
   const [formData, setFormData] = useState({
     toolName: "",
+    toolNameZh: "",
     toolUrl: "",
     toolDescription: "",
+    toolDescriptionZh: "",
     toolLogo: "",
-    category: "",
+    toolImage: "",
+    slug: "",
   })
 
   useEffect(() => {
@@ -47,7 +50,6 @@ export default function UserCenterPage() {
         return
       }
       setUser(user)
-      initializeMockSubmissions(user.id)
       loadSubmissions()
     })
 
@@ -63,10 +65,19 @@ export default function UserCenterPage() {
     return () => subscription.unsubscribe()
   }, [router])
 
-  const loadSubmissions = () => {
+  const loadSubmissions = async () => {
     if (user) {
-      const userSubmissions = getSubmissions(user.id)
-      setSubmissions(userSubmissions)
+      try {
+        const userSubmissions = await getUserSubmissions(user.id)
+        setSubmissions(userSubmissions)
+      } catch (error) {
+        console.error('Error loading submissions:', error)
+        toast({
+          title: "加载失败",
+          description: "无法加载提交记录",
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -76,12 +87,12 @@ export default function UserCenterPage() {
     router.push("/")
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!user) return
 
-    if (!formData.toolName || !formData.toolUrl || !formData.toolDescription || !formData.category) {
+    if (!formData.toolName || !formData.toolNameZh || !formData.toolUrl || !formData.toolDescription || !formData.toolDescriptionZh || !formData.slug) {
       toast({
         title: "提交失败",
         description: "请填写所有必填字段",
@@ -90,30 +101,53 @@ export default function UserCenterPage() {
       return
     }
 
-    addSubmission({
-      userId: user.id,
-      toolName: formData.toolName,
-      toolUrl: formData.toolUrl,
-      toolDescription: formData.toolDescription,
-      toolLogo: formData.toolLogo,
-      category: formData.category,
-    })
+    try {
+      const result = await submitTool({
+        toolName: formData.toolName,
+        toolNameZh: formData.toolNameZh,
+        toolDescription: formData.toolDescription,
+        toolDescriptionZh: formData.toolDescriptionZh,
+        toolUrl: formData.toolUrl,
+        toolLogo: formData.toolLogo,
+        toolImage: formData.toolImage,
+        slug: formData.slug,
+        userId: user.id,
+      })
 
-    toast({
-      title: "提交成功",
-      description: "您的工具已提交，等待审核",
-    })
+      if (result.success) {
+        toast({
+          title: "提交成功",
+          description: "您的工具已提交，等待审核",
+        })
 
-    setFormData({
-      toolName: "",
-      toolUrl: "",
-      toolDescription: "",
-      toolLogo: "",
-      category: "",
-    })
+        setFormData({
+          toolName: "",
+          toolNameZh: "",
+          toolUrl: "",
+          toolDescription: "",
+          toolDescriptionZh: "",
+          toolLogo: "",
+          toolImage: "",
+          slug: "",
+        })
 
-    loadSubmissions()
-    setActiveTab("history")
+        loadSubmissions()
+        setActiveTab("history")
+      } else {
+        toast({
+          title: "提交失败",
+          description: result.error || "提交失败，请重试",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Submit error:', error)
+      toast({
+        title: "提交失败",
+        description: "提交失败，请重试",
+        variant: "destructive",
+      })
+    }
   }
 
   const getStatusBadge = (status: Submission["status"]) => {
@@ -199,23 +233,23 @@ export default function UserCenterPage() {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-foreground">{submission.toolName}</h3>
+                            <h3 className="font-semibold text-foreground">{submission.tool_name_zh || submission.tool_name}</h3>
                             {getStatusBadge(submission.status)}
                           </div>
-                          <p className="text-sm text-muted-foreground mb-2">{submission.toolDescription}</p>
+                          <p className="text-sm text-muted-foreground mb-2">{submission.tool_description_zh || submission.tool_description}</p>
                           <a
-                            href={submission.toolUrl}
+                            href={submission.tool_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-primary hover:underline"
                           >
-                            {submission.toolUrl}
+                            {submission.tool_url}
                           </a>
                           <p className="text-xs text-muted-foreground mt-2">
-                            提交时间: {new Date(submission.submittedAt).toLocaleDateString("zh-CN")}
+                            提交时间: {new Date(submission.created_at).toLocaleDateString("zh-CN")}
                           </p>
-                          {submission.reviewNote && (
-                            <p className="text-xs text-muted-foreground mt-1">审核备注: {submission.reviewNote}</p>
+                          {submission.review_note && (
+                            <p className="text-xs text-muted-foreground mt-1">审核备注: {submission.review_note}</p>
                           )}
                         </div>
                       </div>
@@ -236,13 +270,26 @@ export default function UserCenterPage() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="toolName">
-                      工具名称 <span className="text-destructive">*</span>
+                      工具名称（英文） <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="toolName"
-                      placeholder="请输入工具名称"
+                      placeholder="请输入工具英文名称"
                       value={formData.toolName}
                       onChange={(e) => setFormData({ ...formData, toolName: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="toolNameZh">
+                      工具名称（中文） <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="toolNameZh"
+                      placeholder="请输入工具中文名称"
+                      value={formData.toolNameZh}
+                      onChange={(e) => setFormData({ ...formData, toolNameZh: e.target.value })}
                       required
                     />
                   </div>
@@ -262,48 +309,61 @@ export default function UserCenterPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="toolLogo">网站Logo</Label>
+                    <Label htmlFor="slug">
+                      URL标识 <span className="text-destructive">*</span>
+                    </Label>
                     <Input
-                      id="toolLogo"
-                      type="url"
-                      placeholder="https://example.com/logo.png"
-                      value={formData.toolLogo}
-                      onChange={(e) => setFormData({ ...formData, toolLogo: e.target.value })}
+                      id="slug"
+                      placeholder="doubao"
+                      value={formData.slug}
+                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      required
                     />
-                    <p className="text-xs text-muted-foreground">请输入Logo图片的URL地址（选填）</p>
+                    <p className="text-xs text-muted-foreground">用于生成工具详情页URL，如：/tool/doubao</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="category">
-                      工具分类 <span className="text-destructive">*</span>
-                    </Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
-                    >
-                      <SelectTrigger id="category">
-                        <SelectValue placeholder="请选择分类" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.nameZh}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <FileUpload
+                    bucket="tool-logos"
+                    path="submissions"
+                    label="工具Logo"
+                    onUpload={(url) => setFormData({ ...formData, toolLogo: url })}
+                    onRemove={() => setFormData({ ...formData, toolLogo: "" })}
+                    previewUrl={formData.toolLogo}
+                  />
+
+                  <FileUpload
+                    bucket="tool-previews"
+                    path="submissions"
+                    label="工具预览图"
+                    onUpload={(url) => setFormData({ ...formData, toolImage: url })}
+                    onRemove={() => setFormData({ ...formData, toolImage: "" })}
+                    previewUrl={formData.toolImage}
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="toolDescription">
-                      工具描述 <span className="text-destructive">*</span>
+                      工具描述（英文） <span className="text-destructive">*</span>
                     </Label>
                     <Textarea
                       id="toolDescription"
-                      placeholder="请简要描述工具的功能和特点"
+                      placeholder="请简要描述工具的功能和特点（英文）"
                       rows={4}
                       value={formData.toolDescription}
                       onChange={(e) => setFormData({ ...formData, toolDescription: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="toolDescriptionZh">
+                      工具描述（中文） <span className="text-destructive">*</span>
+                    </Label>
+                    <Textarea
+                      id="toolDescriptionZh"
+                      placeholder="请简要描述工具的功能和特点（中文）"
+                      rows={4}
+                      value={formData.toolDescriptionZh}
+                      onChange={(e) => setFormData({ ...formData, toolDescriptionZh: e.target.value })}
                       required
                     />
                   </div>

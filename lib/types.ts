@@ -41,16 +41,20 @@ export interface User {
 
 export interface Submission {
   id: string
-  userId: string
-  toolName: string
-  toolUrl: string
-  toolDescription: string
-  toolLogo?: string
-  category: string
+  user_id: string
+  tool_name: string
+  tool_name_zh: string
+  tool_url: string
+  tool_description: string
+  tool_description_zh: string
+  tool_logo?: string
+  tool_image?: string
+  slug: string
   status: "pending" | "approved" | "rejected"
-  submittedAt: string
-  reviewedAt?: string
-  reviewNote?: string
+  created_at: string
+  updated_at?: string
+  reviewed_at?: string
+  review_note?: string
 }
 
 export interface QA {
