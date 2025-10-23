@@ -322,23 +322,25 @@ export default function UserCenterPage() {
                     <p className="text-xs text-muted-foreground">用于生成工具详情页URL，如：/tool/doubao</p>
                   </div>
 
-                  <FileUpload
-                    bucket="tool-logos"
-                    path="submissions"
-                    label="工具Logo"
-                    onUpload={(url) => setFormData({ ...formData, toolLogo: url })}
-                    onRemove={() => setFormData({ ...formData, toolLogo: "" })}
-                    previewUrl={formData.toolLogo}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FileUpload
+                      bucket="tool-logos"
+                      path="submissions"
+                      label="工具Logo"
+                      onUpload={(url) => setFormData({ ...formData, toolLogo: url })}
+                      onRemove={() => setFormData({ ...formData, toolLogo: "" })}
+                      previewUrl={formData.toolLogo}
+                    />
 
-                  <FileUpload
-                    bucket="tool-previews"
-                    path="submissions"
-                    label="工具预览图"
-                    onUpload={(url) => setFormData({ ...formData, toolImage: url })}
-                    onRemove={() => setFormData({ ...formData, toolImage: "" })}
-                    previewUrl={formData.toolImage}
-                  />
+                    <FileUpload
+                      bucket="tool-previews"
+                      path="submissions"
+                      label="工具预览图"
+                      onUpload={(url) => setFormData({ ...formData, toolImage: url })}
+                      onRemove={() => setFormData({ ...formData, toolImage: "" })}
+                      previewUrl={formData.toolImage}
+                    />
+                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="toolDescription">
