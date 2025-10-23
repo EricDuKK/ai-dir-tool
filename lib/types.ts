@@ -8,20 +8,27 @@ export interface Tool {
   description: string
   descriptionZh: string // Chinese description
   detailedIntroduction?: string // Detailed introduction for detail page
-  logo: string
+  logoUrl: string // Logo image URL
+  imageUrl: string // Website preview image URL
   category: string
   url: string
   isHot?: boolean
   isNew?: boolean
   createdAt: string
+  updatedAt: string
+  viewCount?: number
+  likeCount?: number
   tags?: string[]
+  status?: 'active' | 'inactive' | 'archived'
 }
 
 export interface Category {
   id: string
   name: string
-  nameZh: string
+  name_zh: string
   icon: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface User {

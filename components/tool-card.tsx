@@ -15,7 +15,7 @@ export function ToolCard({ tool }: ToolCardProps) {
         <CardContent className="flex items-start gap-3 p-4">
           {/* Tool Logo */}
           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg">
-            <Image src={tool.logo || "/placeholder.svg"} alt={tool.nameZh} fill className="object-cover" />
+            <Image src={tool.logoUrl || "/placeholder.svg"} alt={tool.nameZh} fill className="object-cover" />
           </div>
 
           {/* Tool Info */}

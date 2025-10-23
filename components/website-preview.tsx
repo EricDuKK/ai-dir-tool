@@ -8,9 +8,10 @@ interface WebsitePreviewProps {
   url: string
   title?: string
   className?: string
+  imageUrl?: string
 }
 
-export function WebsitePreview({ url, title, className }: WebsitePreviewProps) {
+export function WebsitePreview({ url, title, className, imageUrl }: WebsitePreviewProps) {
   return (
     <Card className={cn("w-full", className)}>
       <CardHeader>
@@ -31,7 +32,7 @@ export function WebsitePreview({ url, title, className }: WebsitePreviewProps) {
         <div className="space-y-4">
           <div className="relative overflow-hidden rounded-lg border">
             <Image
-              src="/placeholder.jpg"
+              src={imageUrl || "/placeholder.jpg"}
               alt={`${title || '网站'}预览图`}
               width={1280}
               height={720}

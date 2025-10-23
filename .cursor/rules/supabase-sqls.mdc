@@ -72,6 +72,7 @@ CREATE TABLE ai_tools (
   description_zh TEXT NOT NULL,
   detailed_introduction TEXT,
   logo_url VARCHAR(500),
+  image_url TEXT NOT NULL
   category_id VARCHAR(50) NOT NULL REFERENCES categories(id),
   website_url VARCHAR(500) NOT NULL,
   is_hot BOOLEAN DEFAULT false,
