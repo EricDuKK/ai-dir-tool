@@ -37,32 +37,48 @@ export async function submitTool(formData: {
   try {
     const supabase = createClient()
     
-    // 检查 slug 是否已存在
-    const { data: existingTool } = await supabase
-      .from('ai_tools')
-      .select('id')
-      .eq('slug', formData.slug)
-      .single()
+    // 检查 slug 是否已存在（使用更安全的查询方式）
+    try {
+      const { data: existingTool, error: toolError } = await supabase
+        .from('ai_tools')
+        .select('id')
+        .eq('slug', formData.slug)
+        .limit(1)
 
-    if (existingTool) {
-      return {
-        success: false,
-        error: '该URL标识已被使用，请选择其他标识'
+      if (toolError) {
+        console.warn('Error checking ai_tools slug:', toolError)
+        // 如果查询失败，继续执行，不阻止提交
+      } else if (existingTool && existingTool.length > 0) {
+        return {
+          success: false,
+          error: '该URL标识已被使用，请选择其他标识'
+        }
       }
+    } catch (error) {
+      console.warn('Error checking ai_tools slug:', error)
+      // 继续执行，不阻止提交
     }
 
     // 检查用户提交中是否已有相同 slug
-    const { data: existingSubmission } = await supabase
-      .from('user_submissions')
-      .select('id')
-      .eq('slug', formData.slug)
-      .single()
+    try {
+      const { data: existingSubmission, error: submissionError } = await supabase
+        .from('user_submissions')
+        .select('id')
+        .eq('slug', formData.slug)
+        .limit(1)
 
-    if (existingSubmission) {
-      return {
-        success: false,
-        error: '该URL标识已被使用，请选择其他标识'
+      if (submissionError) {
+        console.warn('Error checking user_submissions slug:', submissionError)
+        // 如果查询失败，继续执行，不阻止提交
+      } else if (existingSubmission && existingSubmission.length > 0) {
+        return {
+          success: false,
+          error: '该URL标识已被使用，请选择其他标识'
+        }
       }
+    } catch (error) {
+      console.warn('Error checking user_submissions slug:', error)
+      // 继续执行，不阻止提交
     }
 
     const { data, error } = await supabase
