@@ -180,6 +180,7 @@ export default function UserCenterPage() {
     console.log('Starting tool submission...')
     
     try {
+      console.log('Calling submitTool with user ID:', user.id)
       const result = await submitTool({
         toolName: formData.toolName,
         toolNameZh: formData.toolNameZh,
@@ -193,12 +194,22 @@ export default function UserCenterPage() {
       })
 
       console.log('Submit result:', result)
+      console.log('Result type:', typeof result, 'Success:', result?.success)
 
       if (result.success) {
         toast({
           title: "提交成功",
           description: "您的工具已提交，等待审核",
         })
+
+        // 乐观更新历史列表，避免手动刷新
+        if ((result as any).data?.[0]) {
+          const created = (result as any).data[0]
+          setSubmissions((prev) => [created, ...prev])
+        } else {
+          // 如果没有返回数据，退化为主动刷新
+          loadSubmissions()
+        }
 
         setFormData({
           toolName: "",
@@ -210,8 +221,6 @@ export default function UserCenterPage() {
           toolImage: "",
           slug: "",
         })
-
-        loadSubmissions()
         setActiveTab("history")
       } else {
         toast({

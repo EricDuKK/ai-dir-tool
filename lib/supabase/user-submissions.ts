@@ -33,103 +33,59 @@ export async function submitTool(formData: {
   toolImage: string
   slug: string
   userId: string
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string; data?: any[] }> {
+  console.log('submitTool called with:', formData)
+  console.log('User ID:', formData.userId)
+  
   try {
-    console.log('submitTool called with:', formData)
     const supabase = createClient()
     console.log('Supabase client created successfully')
     
-    // 检查 slug 是否已存在（使用更安全的查询方式）
-    try {
-      const { data: existingTool, error: toolError } = await supabase
-        .from('ai_tools')
-        .select('id')
-        .eq('slug', formData.slug)
-        .limit(1)
+    // 为潜在卡顿的请求添加超时保护
+    const withTimeout = async <T>(promise: Promise<T>, label: string, ms = 10000): Promise<T> => {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          setTimeout(() => reject(new Error(`操作超时: ${label} 超过 ${ms}ms`)), ms)
+        })
+      ])
+    }
+    
+    // 注意：此处不再调用 auth.getUser，避免在某些网络环境下 gotrue 请求超时
+    // 直接相信从页面传入的 userId（已在页面端取自会话）
+    
+    // 调用内部 API，避免浏览器直连 Supabase 引发的 CORS/预检/网络限制问题
+    console.log('Calling internal API /api/user-submissions ...')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
 
-      if (toolError) {
-        console.warn('Error checking ai_tools slug:', toolError)
-        // 如果查询失败，继续执行，不阻止提交
-      } else if (existingTool && existingTool.length > 0) {
-        return {
-          success: false,
-          error: '该URL标识已被使用，请选择其他标识'
-        }
-      }
-    } catch (error) {
-      console.warn('Error checking ai_tools slug:', error)
-      // 继续执行，不阻止提交
+    const response = await fetch('/api/user-submissions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData),
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+
+    const result = await response.json()
+    console.log('Internal API result:', result)
+
+    if (!response.ok || !result?.success) {
+      return { success: false, error: result?.error || '提交失败' }
     }
 
-    // 检查用户提交中是否已有相同 slug
-    try {
-      const { data: existingSubmission, error: submissionError } = await supabase
-        .from('user_submissions')
-        .select('id')
-        .eq('slug', formData.slug)
-        .limit(1)
-
-      if (submissionError) {
-        console.warn('Error checking user_submissions slug:', submissionError)
-        // 如果查询失败，继续执行，不阻止提交
-      } else if (existingSubmission && existingSubmission.length > 0) {
-        return {
-          success: false,
-          error: '该URL标识已被使用，请选择其他标识'
-        }
-      }
-    } catch (error) {
-      console.warn('Error checking user_submissions slug:', error)
-      // 继续执行，不阻止提交
-    }
-
-    const { data, error } = await supabase
-      .from('user_submissions')
-      .insert({
-        user_id: formData.userId,
-        tool_name: formData.toolName,
-        tool_name_zh: formData.toolNameZh,
-        tool_description: formData.toolDescription,
-        tool_description_zh: formData.toolDescriptionZh,
-        tool_url: formData.toolUrl,
-        tool_logo: formData.toolLogo,
-        tool_image: formData.toolImage,
-        slug: formData.slug,
-        status: 'pending'
-      })
-      .select()
-
-    if (error) {
-      console.error('Error submitting tool:', error)
-      
-      // 提供更具体的错误信息
-      if (error.message.includes('permission denied')) {
-        return {
-          success: false,
-          error: '权限不足，请检查您的登录状态'
-        }
-      }
-      
-      if (error.message.includes('duplicate key')) {
-        return {
-          success: false,
-          error: '该URL标识已被使用，请选择其他标识'
-        }
-      }
-      
-      return {
-        success: false,
-        error: error.message
-      }
-    }
-
-    console.log('Tool submitted successfully:', data)
-    return { success: true }
+    return { success: true, data: result?.data }
   } catch (error) {
-    console.error('submitTool error:', error)
+    console.error('submitTool exception:', error)
+    console.error('Error type:', typeof error)
+    console.error('Error name:', error instanceof Error ? error.name : 'unknown')
+    console.error('Error message:', error instanceof Error ? error.message : String(error))
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return {
       success: false,
-      error: '提交失败，请重试'
+      error: `提交失败: ${error instanceof Error ? error.message : String(error)}`
     }
   }
 }
