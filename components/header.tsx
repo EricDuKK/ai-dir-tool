@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Search, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,9 +15,40 @@ interface HeaderProps {
   onSearch?: (query: string) => void
 }
 
-export function Header({ onSearch }: HeaderProps) {
+// 提取使用 useSearchParams 的组件
+function SearchBar({ onSearch }: { onSearch?: (query: string) => void }) {
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
+
+  useEffect(() => {
+    const query = searchParams.get("q")
+    if (query) {
+      setSearchQuery(query)
+    }
+  }, [searchParams])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSearch?.(searchQuery)
+  }
+
+  return (
+    <form onSubmit={handleSearch} className="mx-auto w-full max-w-2xl">
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="站内AI工具搜索"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-11 w-full rounded-full bg-muted/50 pl-11 pr-4 text-sm focus-visible:ring-primary"
+        />
+      </div>
+    </form>
+  )
+}
+
+export function Header({ onSearch }: HeaderProps) {
   const [user, setUser] = useState<any>(null)
   const [isClient, setIsClient] = useState(false)
 
@@ -38,18 +69,6 @@ export function Header({ onSearch }: HeaderProps) {
 
     return () => subscription.unsubscribe()
   }, [])
-
-  useEffect(() => {
-    const query = searchParams.get("q")
-    if (query) {
-      setSearchQuery(query)
-    }
-  }, [searchParams])
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSearch?.(searchQuery)
-  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -81,19 +100,22 @@ export function Header({ onSearch }: HeaderProps) {
           </div>
         </div>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="mx-auto w-full max-w-2xl">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="站内AI工具搜索"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-11 w-full rounded-full bg-muted/50 pl-11 pr-4 text-sm focus-visible:ring-primary"
-            />
+        {/* Search Bar - 使用 Suspense 包裹 */}
+        <Suspense fallback={
+          <div className="mx-auto w-full max-w-2xl">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="站内AI工具搜索"
+                disabled
+                className="h-11 w-full rounded-full bg-muted/50 pl-11 pr-4 text-sm"
+              />
+            </div>
           </div>
-        </form>
+        }>
+          <SearchBar onSearch={onSearch} />
+        </Suspense>
 
         {/* User Button with Dropdown */}
         {!isClient ? (

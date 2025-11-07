@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +21,7 @@ import { LogOut, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { FileUpload } from "@/components/file-upload"
 
-export default function UserCenterPage() {
+function UserCenterContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -493,5 +493,25 @@ export default function UserCenterPage() {
         </Tabs>
       </div>
     </MainLayout>
+  )
+}
+
+export default function UserCenterPage() {
+  return (
+    <Suspense fallback={
+      <MainLayout>
+        <div className="container mx-auto px-8 py-8 max-w-5xl">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center py-12">
+                <p className="text-muted-foreground">加载中...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
+    }>
+      <UserCenterContent />
+    </Suspense>
   )
 }

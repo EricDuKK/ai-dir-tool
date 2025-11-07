@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { MainLayout } from "@/components/main-layout"
 import { ToolCard } from "@/components/tool-card"
@@ -7,7 +8,7 @@ import { mockTools } from "@/lib/mock-data"
 import { Search } from "lucide-react"
 import { useMemo } from "react"
 
-export default function SearchPage() {
+function SearchResults() {
   const searchParams = useSearchParams()
   const query = searchParams.get("q") || ""
 
@@ -63,5 +64,27 @@ export default function SearchPage() {
         )}
       </div>
     </MainLayout>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <MainLayout>
+        <div className="container mx-auto px-8 py-8 max-w-7xl">
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Search className="h-5 w-5 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">搜索结果</h1>
+            </div>
+            <p className="text-muted-foreground">加载中...</p>
+          </div>
+        </div>
+      </MainLayout>
+    }>
+      <SearchResults />
+    </Suspense>
   )
 }
